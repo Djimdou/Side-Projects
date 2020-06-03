@@ -3,4 +3,4 @@ Projects done for fun
 
 1) African countries performance at the International Math Olympiads
 
-2) Mbay Audio Gnere Classification
+2) Mbay Audio Genre Classification
