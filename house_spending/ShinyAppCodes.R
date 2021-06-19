@@ -21,12 +21,12 @@ server <- function(input, output) {}
 
 shinyApp(ui = ui, server = server)
 
-# # Data: Enquête sur les dépenses des ménages, at 
+# # Data: EnquÃªte sur les dÃ©penses des mÃ©nages, at 
 # https://www150.statcan.gc.ca/n1/pub/62m0004x/62m0004x2017001-fra.htm
 
 
 #setwd("C:/Users/djimd/Downloads/SHS_EDM_2017-fra/")
 
-diary <- read.csv(file="C:/Users/djimd/Downloads/SHS_EDM_2017-fra/SHS_EDM_2017/Data - Données/CSV/SHS-62M004X-E-2017-Diary_F1.csv",
+diary <- read.csv(file="C:/Users/djimd/Downloads/SHS_EDM_2017-fra/SHS_EDM_2017/Data - DonnÃ©es/CSV/SHS-62M004X-E-2017-Diary_F1.csv",
                   header=TRUE)
   
