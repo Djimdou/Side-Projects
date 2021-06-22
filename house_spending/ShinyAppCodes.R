@@ -12,7 +12,8 @@ ui <- fluidPage("Household Spending",
                                       "59 - British Columbia",
                                       "63 - Territorial capitals")
                             ),
-                plotOutput(outputId="pie")
+                plotOutput(outputId="pie"),
+                plotOutput(outputId="hist")
                 )
 
 server <- function(input, output) {
@@ -25,7 +26,6 @@ server <- function(input, output) {
   diary <- read.csv(file="C:/Users/djimd/Downloads/SHS_EDM_2017-fra/SHS_EDM_2017/Data - Données/CSV/SHS-62M004X-E-2017-Diary_F1.csv",
                     header=TRUE)
   output$pie <- renderPlot({
-    title <- "Household type"
     pie(table(factor(diary[diary$Prov==as.integer(substr(input$prov,1,2)),'HHType6'],
                      levels = 1:6,
                      labels=c("One person household",
@@ -35,9 +35,15 @@ server <- function(input, output) {
                               "Lone parent family with no additional persons",
                               "Other household with related or unrelated persons")))
     )
+    title("Household type")
+  })
+  output$hist <- renderPlot({
+    hist(diary[diary$Prov==as.integer(substr(input$prov,1,2)),'HHSize'],breaks=c(0.5,1.5,2.5,3.5,4.5),main="Household size",xlab=NULL)
+    #title("Household size")
   })
 }
 
 shinyApp(ui = ui, server = server)
 
-
+#hist(diary[diary$Prov==14,'HHSize'],breaks=c(0.5,1.5,2.5,3.5,4.5),main="Household size",xlab=NULL)
+#title("Household size")
