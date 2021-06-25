@@ -1,4 +1,5 @@
 library(shiny)
+library(sf) # for st_read
 
 # functions
 
@@ -33,13 +34,8 @@ ui <- fluidPage("Household Spending",
                 plotOutput(outputId="pie_type"),
                 plotOutput(outputId="hist"),
                 plotOutput(outputId="pie_phone"),
-                # Household income # on map of Canada
-                # Household expenditure # on map of Canada
-                #tableOutput(outputId="table")
-                #fluidRow(
-                #  column(12,
                 dataTableOutput('table')
-                #  ))
+                ,plotOutput(outputId="map")
                 )
 
 server <- function(input, output) {
@@ -52,7 +48,8 @@ server <- function(input, output) {
   diary <- read.csv(file="C:/Users/djimd/Downloads/SHS_EDM_2017-fra/SHS_EDM_2017/Data - Données/CSV/SHS-62M004X-E-2017-Diary_F1.csv",
                     header=TRUE)
   
-  #ChosenProv <- as.integer(substr(input$prov,1,2))
+  # Load GeoJSON file of Canada provinces (available here: https://exploratory.io/map)
+  canada_prov <- st_read("C:/Users/djimd/Downloads/SHS_EDM_2017-fra/Household_Spending/canada_provinces/canada_provinces.geojson", quiet = TRUE)
   
   output$pie_type <- renderPlot({
     pie(table(factor(diary[diary$Prov==as.integer(substr(input$prov,1,2)),'HHType6'],
@@ -80,21 +77,19 @@ server <- function(input, output) {
   
   output$table <- renderDataTable(func_income(as.integer(substr(input$prov,1,2))))
   
+  output$map <- renderPlot({
+    map <- ggplot(data = canada_prov,mapping = aes(fill = c(0,0,0,1:10)))
+    map + geom_sf()
+  })
+  
 }
 
 shinyApp(ui = ui, server = server)
 
 
-install.packages("rgdal")
-library(rgdal)
+#install.packages("rgdal")
+#library(rgdal)
 # help: https://www.r-bloggers.com/2018/12/canada-map/
 
-canada <- readOGR(dsn="C:/Users/djimd/Downloads/SHS_EDM_2017-fra/Household_Spending/canada_map/gpr_000b11g_e.gml")
+#canada <- readOGR(dsn="C:/Users/djimd/Downloads/SHS_EDM_2017-fra/Household_Spending/canada_map/gpr_000b11g_e.gml")
 
-# Converting to GeoJSON format and simplifying the polygons
-
-install.packages("geojsonio")
-library(geojsonio)
-
-canada_json <- geojson_json(canada)
-canada_sim <- ms_simplify(canada_json)
