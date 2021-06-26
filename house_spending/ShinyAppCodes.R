@@ -1,16 +1,21 @@
+#install.packages('shiny')
 library(shiny)
+#install.packages('sf')
 library(sf) # for st_read
+#install.packages('ggplot2')
+library(ggplot2) # for ggplot
+library(dplyr) # for full_join
 
 # functions
 
-func_income <- function(province)
+func_income <- function(province,data)
 {
   IncomeTable <- data.frame(
-    matrix(c(min(diary[diary$Prov==province,'HH_TotInc']),median(diary[diary$Prov==province,'HH_TotInc']),max(diary[diary$Prov==province,'HH_TotInc']),
-             min(diary[diary$Prov==province,'HH_EarnInc']),median(diary[diary$Prov==province,'HH_EarnInc']),max(diary[diary$Prov==province,'HH_EarnInc']),
-             min(diary[diary$Prov==province,'HH_InvInc']),median(diary[diary$Prov==province,'HH_InvInc']),max(diary[diary$Prov==province,'HH_InvInc']),
-             min(diary[diary$Prov==province,'HH_GovInc']),median(diary[diary$Prov==province,'HH_GovInc']),max(diary[diary$Prov==province,'HH_GovInc']),
-             min(diary[diary$Prov==province,'HH_OthInc']),median(diary[diary$Prov==province,'HH_OthInc']),max(diary[diary$Prov==province,'HH_OthInc'])),
+    matrix(c(min(data[data$Prov==province,'HH_TotInc']),median(data[data$Prov==province,'HH_TotInc']),max(data[data$Prov==province,'HH_TotInc']),
+             min(data[data$Prov==province,'HH_EarnInc']),median(data[data$Prov==province,'HH_EarnInc']),max(data[data$Prov==province,'HH_EarnInc']),
+             min(data[data$Prov==province,'HH_InvInc']),median(data[data$Prov==province,'HH_InvInc']),max(data[data$Prov==province,'HH_InvInc']),
+             min(data[data$Prov==province,'HH_GovInc']),median(data[data$Prov==province,'HH_GovInc']),max(data[data$Prov==province,'HH_GovInc']),
+             min(data[data$Prov==province,'HH_OthInc']),median(data[data$Prov==province,'HH_OthInc']),max(data[data$Prov==province,'HH_OthInc'])),
            byrow = TRUE,ncol=3)
   )
   colnames(IncomeTable) <- c("Minimum", "Median", "Maximum")
@@ -30,11 +35,12 @@ ui <- fluidPage("Household Spending",
                                       "59 - British Columbia",
                                       "63 - Territorial capitals")
                             ),
+                plotOutput(outputId="map_single")
                 # Household characteristic
-                plotOutput(outputId="pie_type"),
-                plotOutput(outputId="hist"),
-                plotOutput(outputId="pie_phone"),
-                dataTableOutput('table')
+                ,plotOutput(outputId="pie_type")
+                ,plotOutput(outputId="hist")
+                ,plotOutput(outputId="pie_phone")
+                ,dataTableOutput('table')
                 ,plotOutput(outputId="map")
                 )
 
@@ -50,6 +56,8 @@ server <- function(input, output) {
   
   # Load GeoJSON file of Canada provinces (available here: https://exploratory.io/map)
   canada_prov <- st_read("C:/Users/djimd/Downloads/SHS_EDM_2017-fra/Household_Spending/canada_provinces/canada_provinces.geojson", quiet = TRUE)
+  
+  # harmonize with survey data: 14 - Atlantic provinces =  13 - New Brunswick + 11 - Prince Edward Island
   
   output$pie_type <- renderPlot({
     pie(table(factor(diary[diary$Prov==as.integer(substr(input$prov,1,2)),'HHType6'],
@@ -75,11 +83,56 @@ server <- function(input, output) {
     title("Landline telephone service")
   })
   
-  output$table <- renderDataTable(func_income(as.integer(substr(input$prov,1,2))))
+  output$table <- renderDataTable(func_income(as.integer(substr(input$prov,1,2)),diary))
+  
+  output$map_single <- renderPlot({
+    ggplot(data = canada_prov)+
+      geom_sf()+
+      ggtitle("Situation")
+    
+    # # Highlight the region # # ---------------------------------------------------
+    
+    # Select a subregion
+    single_province <- subset(canada_prov, PRUID=="59")
+    
+    # Fill the selected subregion with a predefined color and
+    # plot a colored point with a specified long. and lat.
+    #ggplot(data = canada_prov) +
+    #  geom_sf() + theme_void() +
+    #  geom_polygon(data = canada_prov, fill = NA, color = "white") +
+    #  geom_polygon(color = "black", fill = NA) +
+    #  geom_polygon(data = single_province, fill = "red", color = "white")
+        
+    
+    # # -----------------------------------------------------------------------------
+    
+  })
   
   output$map <- renderPlot({
-    map <- ggplot(data = canada_prov,mapping = aes(fill = c(0,0,0,1:10)))
-    map + geom_sf()
+    # Replace 'id' with new region name, where applicable
+    canada_prov <- canada_prov %>%
+      mutate(PRUID = case_when(PRUID %in% c("11","13") ~ "14",
+                               TRUE ~ PRUID))
+    
+    # Merge map data with data to plot
+    data_to_plot <- data.frame(
+      matrix(c(canada_prov$PRUID,rep(NA,length(canada_prov$PRUID))),byrow = FALSE,ncol=2)
+    )
+    
+    colnames(data_to_plot) <- c('ID','Median')
+    
+    for(p in canada_prov$PRUID){
+      if(p %in% unique(diary$Prov))
+      {
+        data_to_plot[data_to_plot$ID==p,"Median"] = func_income(p,diary)["Total income","Median"]
+      }
+    }
+    
+    map.data <- full_join(canada_prov, data_to_plot, by = c("PRUID"="ID"))
+    
+    ggplot() +
+      geom_sf(data=map.data, aes(fill=Median))+
+      ggtitle("Comparison between provinces")
   })
   
 }
@@ -87,9 +140,18 @@ server <- function(input, output) {
 shinyApp(ui = ui, server = server)
 
 
+
+
+
+
+
 #install.packages("rgdal")
 #library(rgdal)
 # help: https://www.r-bloggers.com/2018/12/canada-map/
 
-#canada <- readOGR(dsn="C:/Users/djimd/Downloads/SHS_EDM_2017-fra/Household_Spending/canada_map/gpr_000b11g_e.gml")
+# how to megre data with map data: https://stackoverflow.com/questions/55185546/merging-countries-provinces-in-shapefile-for-plotting-with-ggplot2
+
+
+
+
 
