@@ -1,10 +1,9 @@
-#install.packages('shiny')
+#install.packages(c('shiny','sf','ggplot2','gghighlight'))
 library(shiny)
-#install.packages('sf')
 library(sf) # for st_read
-#install.packages('ggplot2')
 library(ggplot2) # for ggplot
 library(dplyr) # for full_join
+library(gghighlight) # for gghighlight
 
 # functions
 
@@ -35,7 +34,7 @@ ui <- fluidPage("Household Spending",
                                       "59 - British Columbia",
                                       "63 - Territorial capitals")
                             ),
-                plotOutput(outputId="map_single")
+                plotOutput(outputId="map_highlight")
                 # Household characteristic
                 ,plotOutput(outputId="pie_type")
                 ,plotOutput(outputId="hist")
@@ -56,8 +55,6 @@ server <- function(input, output) {
   
   # Load GeoJSON file of Canada provinces (available here: https://exploratory.io/map)
   canada_prov <- st_read("C:/Users/djimd/Downloads/SHS_EDM_2017-fra/Household_Spending/canada_provinces/canada_provinces.geojson", quiet = TRUE)
-  
-  # harmonize with survey data: 14 - Atlantic provinces =  13 - New Brunswick + 11 - Prince Edward Island
   
   output$pie_type <- renderPlot({
     pie(table(factor(diary[diary$Prov==as.integer(substr(input$prov,1,2)),'HHType6'],
@@ -85,31 +82,17 @@ server <- function(input, output) {
   
   output$table <- renderDataTable(func_income(as.integer(substr(input$prov,1,2)),diary))
   
-  output$map_single <- renderPlot({
+  output$map_highlight <- renderPlot({
+    # not working for 14, 63 yet. Check # ------------------------------------------
     ggplot(data = canada_prov)+
-      geom_sf()+
-      ggtitle("Situation")
-    
-    # # Highlight the region # # ---------------------------------------------------
-    
-    # Select a subregion
-    single_province <- subset(canada_prov, PRUID=="59")
-    
-    # Fill the selected subregion with a predefined color and
-    # plot a colored point with a specified long. and lat.
-    #ggplot(data = canada_prov) +
-    #  geom_sf() + theme_void() +
-    #  geom_polygon(data = canada_prov, fill = NA, color = "white") +
-    #  geom_polygon(color = "black", fill = NA) +
-    #  geom_polygon(data = single_province, fill = "red", color = "white")
-        
-    
-    # # -----------------------------------------------------------------------------
+      geom_sf(fill = "red")+
+      gghighlight(grepl(substr(input$prov,1,2), PRUID))+
+      ggtitle("Selected province")
     
   })
   
   output$map <- renderPlot({
-    # Replace 'id' with new region name, where applicable
+    # harmonize with survey data: 14 - Atlantic provinces =  13 - New Brunswick + 11 - Prince Edward Island
     canada_prov <- canada_prov %>%
       mutate(PRUID = case_when(PRUID %in% c("11","13") ~ "14",
                                TRUE ~ PRUID))
@@ -141,12 +124,6 @@ shinyApp(ui = ui, server = server)
 
 
 
-
-
-
-
-#install.packages("rgdal")
-#library(rgdal)
 # help: https://www.r-bloggers.com/2018/12/canada-map/
 
 # how to megre data with map data: https://stackoverflow.com/questions/55185546/merging-countries-provinces-in-shapefile-for-plotting-with-ggplot2
