@@ -36,11 +36,11 @@ ui <- fluidPage("Household Spending",
                             ),
                 plotOutput(outputId="map_highlight")
                 # Household characteristic
-                ,plotOutput(outputId="pie_type")
-                ,plotOutput(outputId="hist")
-                ,plotOutput(outputId="pie_phone")
-                ,dataTableOutput('table')
-                ,plotOutput(outputId="map")
+                #,plotOutput(outputId="pie_type")
+                #,plotOutput(outputId="hist")
+                #,plotOutput(outputId="pie_phone")
+                #,dataTableOutput('table')
+                #,plotOutput(outputId="map")
                 )
 
 server <- function(input, output) {
@@ -55,6 +55,11 @@ server <- function(input, output) {
   
   # Load GeoJSON file of Canada provinces (available here: https://exploratory.io/map)
   canada_prov <- st_read("C:/Users/djimd/Downloads/SHS_EDM_2017-fra/Household_Spending/canada_provinces/canada_provinces.geojson", quiet = TRUE)
+  
+  # harmonize with survey data: 14 - Atlantic provinces =  13 - New Brunswick + 11 - Prince Edward Island
+  canada_prov <- canada_prov %>%
+    mutate(PRUID = case_when(PRUID %in% c("11","13") ~ "14",
+                             TRUE ~ PRUID))
   
   output$pie_type <- renderPlot({
     pie(table(factor(diary[diary$Prov==as.integer(substr(input$prov,1,2)),'HHType6'],
@@ -83,7 +88,7 @@ server <- function(input, output) {
   output$table <- renderDataTable(func_income(as.integer(substr(input$prov,1,2)),diary))
   
   output$map_highlight <- renderPlot({
-    # not working for 14, 63 yet. Check # ------------------------------------------
+    # not working for 14, 63. Check # ------------------------------------------
     ggplot(data = canada_prov)+
       geom_sf(fill = "red")+
       gghighlight(grepl(substr(input$prov,1,2), PRUID))+
@@ -92,11 +97,7 @@ server <- function(input, output) {
   })
   
   output$map <- renderPlot({
-    # harmonize with survey data: 14 - Atlantic provinces =  13 - New Brunswick + 11 - Prince Edward Island
-    canada_prov <- canada_prov %>%
-      mutate(PRUID = case_when(PRUID %in% c("11","13") ~ "14",
-                               TRUE ~ PRUID))
-    
+
     # Merge map data with data to plot
     data_to_plot <- data.frame(
       matrix(c(canada_prov$PRUID,rep(NA,length(canada_prov$PRUID))),byrow = FALSE,ncol=2)
@@ -130,5 +131,10 @@ shinyApp(ui = ui, server = server)
 
 
 
+# 63 Capital of territories --------------------------------------------------------------
 
-
+ggplot(data = canada_prov)+
+  geom_sf()+#fill = "red"
+  geom_point(y=60.721188, x=-135.056839, col = 'red',size = 3)+ # Whitehorse
+  geom_point(y=62.453972, x=-114.371789, col = 'red',size = 3)+ # Yellowknife
+  geom_point(y=63.748611, x=-68.519722, col = 'red',size = 3) # Iqaluit
