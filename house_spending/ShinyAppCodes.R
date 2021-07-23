@@ -36,11 +36,11 @@ ui <- fluidPage("Household Spending",
                             ),
                 plotOutput(outputId="map_highlight")
                 # Household characteristic
-                #,plotOutput(outputId="pie_type")
-                #,plotOutput(outputId="hist")
-                #,plotOutput(outputId="pie_phone")
-                #,dataTableOutput('table')
-                #,plotOutput(outputId="map")
+                ,plotOutput(outputId="pie_type")
+                ,plotOutput(outputId="hist")
+                ,plotOutput(outputId="pie_phone")
+                ,dataTableOutput('table')
+                ,plotOutput(outputId="map")
                 )
 
 server <- function(input, output) {
@@ -88,11 +88,19 @@ server <- function(input, output) {
   output$table <- renderDataTable(func_income(as.integer(substr(input$prov,1,2)),diary))
   
   output$map_highlight <- renderPlot({
-    # not working for 14, 63. Check # ------------------------------------------
-    ggplot(data = canada_prov)+
-      geom_sf(fill = "red")+
-      gghighlight(grepl(substr(input$prov,1,2), PRUID))+
-      ggtitle("Selected province")
+
+    if(substr(input$prov,1,2)=="63"){# capital of territories
+      ggplot(data = canada_prov)+
+        geom_sf()+#fill = "red"
+        geom_point(y=60.721188, x=-135.056839, col = 'red',size = 3)+ # Whitehorse
+        geom_point(y=62.453972, x=-114.371789, col = 'red',size = 3)+ # Yellowknife
+        geom_point(y=63.748611, x=-68.519722, col = 'red',size = 3) # Iqaluit
+    }else{# provinces
+      ggplot(data = canada_prov)+
+        geom_sf(fill = "red")+
+        gghighlight(grepl(substr(input$prov,1,2), PRUID))+
+        ggtitle("Selected province")
+    }
     
   })
   
